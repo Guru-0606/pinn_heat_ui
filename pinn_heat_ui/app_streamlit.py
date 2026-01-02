@@ -2,6 +2,7 @@ import numpy as np
 import streamlit as st
 import torch
 
+from pathlib import Path
 from pinnheat.model import PINNNet
 from pinnheat.inference import load_checkpoint, predict_u
 from pinnheat.exact import u_exact_heat
@@ -11,9 +12,13 @@ st.write("Input x, t, alpha → outputs u_pred and u_exact")
 
 @st.cache_resource
 def load_model():
-    device="cpu"
+    device = "cpu"
     model = PINNNet(in_dim=3, width=64, depth=4)
-    model, meta = load_checkpoint("checkpoints/model_best.pth", model, device=device)
+
+    APP_DIR = Path(__file__).resolve().parent
+    ckpt_path = APP_DIR / "checkpoints" / "model_best.pth"
+
+    model, meta = load_checkpoint(str(ckpt_path), model, device=device)
     return model, meta, device
 
 model, meta, device = load_model()
