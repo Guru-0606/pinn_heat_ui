@@ -24,3 +24,6 @@ u(x,t;α) = sin(πx) exp(-α π² t)
 pip install -r requirements.txt
 cd pinn_heat_ui
 python -m streamlit run app_streamlit.py
+
+## web link
+https://pinnheatui-abembewxriq9cpngmdp8lu.streamlit.app/
