@@ -11,3 +11,13 @@ env/
 
 # Optional: big files/logs
 *.log
+
+# Python cache
+__pycache__/
+*.pyc
+
+
+# Python cache
+__pycache__/
+*.pyc
+
