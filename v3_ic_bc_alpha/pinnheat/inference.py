@@ -1,33 +1,25 @@
-import numpy as np
 import torch
+from .model import PINNNet
 
-from .scaling import scale_to_minus1_plus1, scale_alpha
+def load_model(checkpoint_path, device=None):
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def load_checkpoint(path, model, device="cpu"):
-    ckpt = torch.load(path, map_location=device)
-    model.load_state_dict(ckpt["model_state"])
-    model.to(device).eval()
-    meta = ckpt["meta"]
-    return model, meta
+    ckpt = torch.load(checkpoint_path, map_location=device)
 
-@torch.no_grad()
-def predict_u(model, x, t, alpha, meta, device="cpu"):
-    x = np.asarray(x, dtype=np.float32)
-    t = np.asarray(t, dtype=np.float32)
-    alpha = np.asarray(alpha, dtype=np.float32)
+    # --- support BOTH formats ---
+    # (A) full checkpoint dict: {"model_state_dict": ...}
+    # (B) raw state_dict: OrderedDict(...)
+    if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
+        state_dict = ckpt["model_state_dict"]
+    else:
+        state_dict = ckpt
 
-    x_min, x_max = meta["x_min"], meta["x_max"]
-    t_min, t_max = meta["t_min"], meta["t_max"]
-    a_min, a_max = meta["alpha_min"], meta["alpha_max"]
+    # infer input dimension from first layer weight
+    # net.0.weight has shape [width, in_dim]
+    in_dim = state_dict["net.0.weight"].shape[1]
 
-    x_t = torch.tensor(x).reshape(-1,1)
-    t_t = torch.tensor(t).reshape(-1,1)
-    a_t = torch.tensor(alpha).reshape(-1,1)
-
-    x_s = scale_to_minus1_plus1(x_t, x_min, x_max)
-    t_s = scale_to_minus1_plus1(t_t, t_min, t_max)
-    a_s = scale_alpha(a_t, a_min, a_max)
-
-    X = torch.cat([x_s, t_s, a_s], dim=1).to(device)
-    u = model(X).cpu().numpy().reshape(x.shape)
-    return u
+    model = PINNNet(in_dim=in_dim, width=64, depth=4).to(device)
+    model.load_state_dict(state_dict, strict=True)
+    model.eval()
+    return model, device
